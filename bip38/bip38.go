@@ -1,6 +1,7 @@
 package bip38
 
-import b58 "../base58"
+// import b58 "../base58"
+import b58 "github.com/symphonyprotocol/sutil/base58"
 import "crypto/aes"
 import "crypto/sha256"
 

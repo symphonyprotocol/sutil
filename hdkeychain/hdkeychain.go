@@ -15,7 +15,8 @@ import "crypto/sha512"
 import "math/big"
 // import "crypto/ecdsa"
 // import "crypto/elliptic"
-import ec "../elliptic"
+// import ec "../elliptic"
+import ec "github.com/symphonyprotocol/sutil/elliptic"
 import "encoding/binary"
 
 const MinSeedsBytes = 128 / 8  			// 最短种子

@@ -5,7 +5,8 @@ import "math/big"
 import "fmt"
 import "crypto/sha256"
 import "golang.org/x/crypto/ripemd160"
-import b58 "../base58"
+// import b58 "../base58"
+import b58 "github.com/symphonyprotocol/sutil/base58"
 
 
 const LenPubKeyBytesCompressed   = 33

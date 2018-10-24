@@ -5,9 +5,11 @@ import (
 	"crypto/elliptic"
 	"math/big"
 	"bytes"
-	b38 "../bip38"
+	// b38 "../bip38"
+	b38 "github.com/symphonyprotocol/sutil/bip38"
 	"golang.org/x/crypto/scrypt"
-	b58 "../base58"
+	// b58 "../base58"
+	b58 "github.com/symphonyprotocol/sutil/base58"
 	"fmt"
 )
 type PrivateKey ecdsa.PrivateKey
