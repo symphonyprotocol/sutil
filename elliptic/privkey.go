@@ -28,7 +28,6 @@ func PrivKeyFromBytes(curve elliptic.Curve, pk []byte) (*PrivateKey, *PublicKey)
 		},
 		D: new(big.Int).SetBytes(pk),
 	}
-
 	return (*PrivateKey)(priv), (*PublicKey)(&priv.PublicKey)
 }
 
@@ -95,4 +94,12 @@ func byteToString(b []byte) (s string) {
 // ToECDSA returns the private key as a *ecdsa.PrivateKey.
 func (p *PrivateKey) ToECDSA() *ecdsa.PrivateKey {
 	return (*ecdsa.PrivateKey)(p)
+}
+
+// Sign generates an ECDSA signature for the provided hash (which should be the result
+// of hashing a larger message) using the private key. Produced signature
+// is deterministic (same message and same key yield the same signature) and canonical
+// in accordance with RFC6979 and BIP0062.
+func (p *PrivateKey) Sign(hash []byte) (*Signature, error) {
+	return signRFC6979(p, hash)
 }

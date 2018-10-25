@@ -1,13 +1,4 @@
-// Copyright 2015 The btcsuite developers
-// Use of this source code is governed by an ISC
-// license that can be found in the LICENSE file.
-
-// This file is ignored during the regular build due to the following build tag.
-// It is called by go generate and used to automatically generate pre-computed
-// tables used to accelerate operations.
-// +build ignore
-
-package main
+package elliptic
 
 import (
 	"bytes"
@@ -17,7 +8,7 @@ import (
 	"log"
 	"os"
 )
-import ec "wallet/elliptic"
+import ec "github.com/symphonyprotocol/sutil/elliptic"
 
 func main() {
 	fi, err := os.Create("secp256k1.go")
@@ -40,10 +31,6 @@ func main() {
 	encoded := make([]byte, base64.StdEncoding.EncodedLen(compressed.Len()))
 	base64.StdEncoding.Encode(encoded, compressed.Bytes())
 
-	fmt.Fprintln(fi, "// Copyright (c) 2015 The btcsuite developers")
-	fmt.Fprintln(fi, "// Use of this source code is governed by an ISC")
-	fmt.Fprintln(fi, "// license that can be found in the LICENSE file.")
-	fmt.Fprintln(fi)
 	fmt.Fprintln(fi, "package btcec")
 	fmt.Fprintln(fi)
 	fmt.Fprintln(fi, "// Auto-generated file (see genprecomps.go)")
@@ -51,7 +38,7 @@ func main() {
 	fmt.Fprintln(fi)
 	fmt.Fprintf(fi, "var secp256k1BytePoints = %q\n", string(encoded))
 
-	a1, b1, a2, b2 := btcec.S256().EndomorphismVectors()
+	a1, b1, a2, b2 := S256().EndomorphismVectors()
 	fmt.Println("The following values are the computed linearly " +
 		"independent vectors needed to make use of the secp256k1 " +
 		"endomorphism:")
