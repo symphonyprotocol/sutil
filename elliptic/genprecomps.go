@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 )
-import ec "github.com/symphonyprotocol/sutil/elliptic"
 
 func main() {
 	fi, err := os.Create("secp256k1.go")
@@ -18,7 +17,7 @@ func main() {
 	defer fi.Close()
 
 	// Compress the serialized byte points.
-	serialized := ec.S256().SerializedBytePoints()
+	serialized := S256().SerializedBytePoints()
 	var compressed bytes.Buffer
 	w := zlib.NewWriter(&compressed)
 	if _, err := w.Write(serialized); err != nil {

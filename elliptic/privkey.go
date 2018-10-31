@@ -103,3 +103,38 @@ func (p *PrivateKey) ToECDSA() *ecdsa.PrivateKey {
 func (p *PrivateKey) Sign(hash []byte) (*Signature, error) {
 	return signRFC6979(p, hash)
 }
+
+
+// checks that string wif is a valid Wallet Import Format or Wallet Import Format Compressed string.
+// return the private key bytes
+func LoadWIF(wif string) (pribytes []byte, err error) {
+
+	ver, priv_bytes, err := b58checkdecode(wif)
+	if err != nil {
+		return priv_bytes, err
+	}
+
+	/* Check that the version byte is 0x80 */
+	if ver != WIF_VERSION {
+		return priv_bytes, fmt.Errorf("Invalid WIF version 0x%02x, expected 0x80.", ver)
+	}
+
+	/* Check that private key bytes length is 32 or 33 */
+	if len(priv_bytes) != 32 && len(priv_bytes) != 33 {
+		return priv_bytes, fmt.Errorf("Invalid private key bytes length %d, expected 32 or 33.", len(priv_bytes))
+	}
+
+	/* If the private key bytes length is 33, check that suffix byte is 0x01 (for compression) */
+	if len(priv_bytes) == 33 && priv_bytes[len(priv_bytes)-1] != WIF_COMPRESSED_FLAG {
+		return priv_bytes, fmt.Errorf("Invalid private key bytes, unknown suffix byte 0x%02x.", priv_bytes[len(priv_bytes)-1])
+	}
+
+	if len(priv_bytes) == 33 {
+		if priv_bytes[len(priv_bytes)-1] != WIF_COMPRESSED_FLAG {
+			return priv_bytes, fmt.Errorf("Invalid private key, unknown suffix byte 0x%02x.", priv_bytes[len(priv_bytes)-1])
+		}
+		priv_bytes = priv_bytes[0:32]
+	}
+
+	return priv_bytes, nil
+}

@@ -8,13 +8,36 @@ import ec "github.com/symphonyprotocol/sutil/elliptic"
 import "bytes"
 import "compress/zlib"
 import "encoding/base64"
+import "encoding/hex"
+// import "strconv"
 
 func BytesToString(b []byte) (s string) {
-	s = ""
-	for i := 0; i < len(b); i++ {
-		s += fmt.Sprintf("%02X", b[i])
+	// s = ""
+	// for i := 0; i < len(b); i++ {
+	// 	s += fmt.Sprintf("%02X", b[i])
+	// }
+	// return s
+	return hex.EncodeToString(b)
+}
+
+func StringToBytes(s string) (b []byte){
+	// var res []string
+	// // p := make([]string, len(s)/2)
+	// idx1 := 0
+	// idx2 := idx1 + 1
+    // for i := 0; i < len(s) / 2; i++ {
+	// 	val := s[idx1: idx2+1]
+	// 	b_val, _ := strconv.ParseInt(val, 16, 8)
+	// 	res = append(res, val)
+	// 	idx1 += 2
+	// 	idx2 = idx1 + 1
+    // }
+	// return b
+	res, err := hex.DecodeString(s)
+	if err != nil{
+		log.Panic(err)
 	}
-	return s
+	return res
 }
 
 

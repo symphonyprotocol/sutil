@@ -7,6 +7,8 @@ import "crypto/sha256"
 import "golang.org/x/crypto/ripemd160"
 // import b58 "../base58"
 import b58 "github.com/symphonyprotocol/sutil/base58"
+import "log"
+import "bytes"
 
 
 const LenPubKeyBytesCompressed   = 33
@@ -187,6 +189,55 @@ func base58CheckEncode(version uint8, bytes []byte) (res string){
 	return res
 }
 
+// b58checkdecode decodes base-58 check encoded string s into a version ver and byte slice b.
+func b58checkdecode(s string) (ver uint8, b []byte, err error) {
+	/* Decode base58 string */
+	b, err = b58.B58decode(s)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	/* Add leading zero bytes */
+	for i := 0; i < len(s); i++ {
+		if s[i] != '1' {
+			break
+		}
+		b = append([]byte{0x00}, b...)
+	}
+
+	/* Verify checksum */
+	if len(b) < 5 {
+		return 0, nil, fmt.Errorf("Invalid base-58 check string: missing checksum.")
+	}
+
+	/* Create a new SHA256 context */
+	sha256_h := sha256.New()
+
+	/* SHA256 Hash #1 */
+	sha256_h.Reset()
+	sha256_h.Write(b[:len(b)-4])
+	hash1 := sha256_h.Sum(nil)
+
+	/* SHA256 Hash #2 */
+	sha256_h.Reset()
+	sha256_h.Write(hash1)
+	hash2 := sha256_h.Sum(nil)
+
+	/* Compare checksum */
+	if bytes.Compare(hash2[0:4], b[len(b)-4:]) != 0 {
+		return 0, nil, fmt.Errorf("Invalid base-58 check string: invalid checksum.")
+	}
+
+	/* Strip checksum bytes */
+	b = b[:len(b)-4]
+
+	/* Extract and strip version */
+	ver = b[0]
+	b = b[1:]
+
+	return ver, b, nil
+}
+
 func (p *PublicKey) ToAddressCompressed() (address string) {
 
 	pub_bytes := p.SerializeCompressed()
@@ -204,4 +255,33 @@ func (p *PublicKey) ToAddressCompressed() (address string) {
 	hash2 := r.Sum(nil)
 	address = base58CheckEncode(WALLET_ADDRESS_FLAG, hash2)
 	return address
+}
+
+// HashPubKey hashes public key
+func HashPubKey(pubKey []byte) []byte {
+	publicSHA256 := sha256.Sum256(pubKey)
+
+	RIPEMD160Hasher := ripemd160.New()
+	_, err := RIPEMD160Hasher.Write(publicSHA256[:])
+	if err != nil {
+		log.Panic(err)
+	}
+	publicRIPEMD160 := RIPEMD160Hasher.Sum(nil)
+
+	return publicRIPEMD160
+}
+
+// verify Address is valid
+func LoadAddress(address string) (pubkey []byte, isvalid bool){
+	flag, keyHashed, err := b58checkdecode(address)
+
+	isvalid = false
+	if err != nil {
+		return keyHashed, isvalid
+	}else if flag != WALLET_ADDRESS_FLAG{
+		return keyHashed, isvalid
+	} else{
+		isvalid = true
+	}
+	return keyHashed, true
 }
