@@ -12,6 +12,7 @@ type ParallelTask struct {
 	Result	interface{}
 	Body	func([]interface{}, func(interface{})) 
 	Params	[]interface{}
+	taskFinishedQueue	chan struct{}
 }
 
 func (p *ParallelTask) Run() {
@@ -19,11 +20,13 @@ func (p *ParallelTask) Run() {
 		dsLogger.Trace("Task finished with result: %v", res)
 		p.Result = res 
 		p.IsFinished = true
+		p.taskFinishedQueue <- struct{}{}
 	})
 }
 
 type SequentialParallelTaskQueue struct {
 	TaskChannel	chan *ParallelTask
+	TaskFinishedQueue	chan struct{}
 	ParallelSize	uint
 	TasksInProgress	[]*ParallelTask
 	ParallelTasksFinishedCallback	func([]*ParallelTask)
@@ -35,10 +38,12 @@ func NewSequentialParallelTaskQueue(size uint, taskFinishedCallback func([]*Para
 		ParallelSize: size,
 		TasksInProgress: make([]*ParallelTask, 0, 0),
 		ParallelTasksFinishedCallback: taskFinishedCallback,
+		TaskFinishedQueue: make(chan struct{}),
 	}
 }
 
 func (p *SequentialParallelTaskQueue) AddTask(t *ParallelTask) {
+	t.taskFinishedQueue = p.TaskFinishedQueue
 	p.TaskChannel <- t
 }
 
@@ -46,7 +51,6 @@ func (p *SequentialParallelTaskQueue) Execute() {
 	go func() {
 		for {
 			time.Sleep(time.Millisecond)
-			p.CheckFinishedTasksInSequential()
 			count := p.GetRunningTasksCount()
 			if count >= p.ParallelSize {
 				continue
@@ -56,6 +60,9 @@ func (p *SequentialParallelTaskQueue) Execute() {
 				dsLogger.Trace("Going to run the task: %v", task)
 				p.TasksInProgress = append(p.TasksInProgress, task)
 				task.Run()
+			case <- p.TaskFinishedQueue:
+				dsLogger.Trace("Going to check if we need to return tasks")
+				p.CheckFinishedTasksInSequential()
 			default:
 				continue
 			}
