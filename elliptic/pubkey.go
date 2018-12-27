@@ -63,11 +63,12 @@ func ParsePubKey(pubKeyBytes []byte,  curve *KoblitzCurve ) (key *PublicKey, err
 
 	format := pubKeyBytes[0]
 	
+	// 奇偶性
+	ybit := (format & 0x1) == 0x1
 	// 最后一bit变0， 高位取反成1
 	// 检查倒数第二位是否为1
 	format &= ^byte(0x1)
-	// 奇偶性
-	ybit := (format & 0x1) == 0x1
+
 
 	pubkeyLen := len(pubKeyBytes)
 
