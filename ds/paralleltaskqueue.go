@@ -5,7 +5,7 @@ import (
 	"github.com/symphonyprotocol/log"
 )
 
-var dsLogger = log.GetLogger("Data-structure")
+var dsLogger = log.GetLogger("Data-structure").SetLevel(log.INFO)
 
 type ParallelTask struct {
 	IsFinished	bool
