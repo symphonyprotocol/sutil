@@ -138,3 +138,7 @@ func LoadWIF(wif string) (pribytes []byte, err error) {
 
 	return priv_bytes, nil
 }
+
+func (p *PrivateKey) ECPubKey() *PublicKey {
+	return (*PublicKey)(&p.PublicKey)
+}
