@@ -78,3 +78,17 @@ func gensecp256k1() {
 	fmt.Printf("a2: %x\n", a2)
 	fmt.Printf("b2: %x\n", b2)
 }
+
+func Min(x, y int64) int64 {
+    if x < y {
+        return x
+    }
+    return y
+}
+
+func Max(x, y int64) int64 {
+    if x > y {
+        return x
+    }
+    return y
+}
