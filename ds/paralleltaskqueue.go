@@ -3,6 +3,7 @@ package ds
 import (
 	"time"
 	"github.com/symphonyprotocol/log"
+	"sync"
 )
 
 var dsLogger = log.GetLogger("Data-structure").SetLevel(log.INFO)
@@ -30,6 +31,7 @@ type SequentialParallelTaskQueue struct {
 	ParallelSize	uint
 	TasksInProgress	[]*ParallelTask
 	ParallelTasksFinishedCallback	func([]*ParallelTask)
+	mtx	sync.RWMutex
 }
 
 func NewSequentialParallelTaskQueue(size uint, taskFinishedCallback func([]*ParallelTask)) *SequentialParallelTaskQueue {
@@ -58,8 +60,10 @@ func (p *SequentialParallelTaskQueue) Execute() {
 			select {
 			case task := <- p.TaskChannel:
 				dsLogger.Trace("Going to run the task: %v", task)
+				p.mtx.Lock()
 				p.TasksInProgress = append(p.TasksInProgress, task)
-				task.Run()
+				p.mtx.Unlock()
+				go task.Run()
 			case <- p.TaskFinishedQueue:
 				dsLogger.Trace("Going to check if we need to return tasks")
 				p.CheckFinishedTasksInSequential()
@@ -72,6 +76,7 @@ func (p *SequentialParallelTaskQueue) Execute() {
 
 func (p *SequentialParallelTaskQueue) CheckFinishedTasksInSequential() {
 	stopIndex := 0
+	p.mtx.Lock()
 	for _, t := range p.TasksInProgress {
 		dsLogger.Trace("tasksInProgress len: %v, finished : %v", len(p.TasksInProgress), t.IsFinished)
 		if t.IsFinished {
@@ -87,17 +92,31 @@ func (p *SequentialParallelTaskQueue) CheckFinishedTasksInSequential() {
 		dsLogger.Trace("Going to callback, finished stop index: %v", stopIndex)
 		p.ParallelTasksFinishedCallback(p.TasksInProgress[0:stopIndex])
 		// modify the array
-		p.TasksInProgress = p.TasksInProgress[stopIndex:]
+		if len(p.TasksInProgress) > 0 {
+			p.TasksInProgress = p.TasksInProgress[stopIndex:]
+		}
 	}
+	p.mtx.Unlock()
 }
 
 func (p *SequentialParallelTaskQueue) GetRunningTasksCount() uint {
 	var count uint = 0
+	p.mtx.Lock()
 	for _, t := range p.TasksInProgress {
 		if t != nil && !t.IsFinished {
 			count++
 		}
 	}
+	p.mtx.Unlock()
 
 	return count
+}
+
+func (p *SequentialParallelTaskQueue) Clear() {
+	//p.mtx.Lock()
+	p.TasksInProgress = nil
+	//p.mtx.Unlock()
+	for len(p.TaskChannel) > 0 {
+		<-p.TaskChannel
+	}
 }
