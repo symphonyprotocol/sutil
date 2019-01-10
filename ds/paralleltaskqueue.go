@@ -38,20 +38,21 @@ func (p *ParallelTask) Retry() {
 type SequentialParallelTaskQueue struct {
 	TaskChannel	chan *ParallelTask
 	TaskFinishedQueue	chan struct{}
-	ParallelSize	uint
+	ParallelSize	int
 	TasksInProgress	[]*ParallelTask
 	ParallelTasksFinishedCallback	func([]*ParallelTask)
 	mtx	sync.RWMutex
 	TimedoutCallback	func([]*ParallelTask)
 }
 
-func NewSequentialParallelTaskQueue(size uint, taskFinishedCallback func([]*ParallelTask), timedOutCallback func([]*ParallelTask)) *SequentialParallelTaskQueue {
+func NewSequentialParallelTaskQueue(size int, taskFinishedCallback func([]*ParallelTask), timedOutCallback func([]*ParallelTask)) *SequentialParallelTaskQueue {
 	return &SequentialParallelTaskQueue{
-		TaskChannel: make(chan *ParallelTask, 1024),
+		TaskChannel: make(chan *ParallelTask, size),
 		ParallelSize: size,
 		TasksInProgress: make([]*ParallelTask, 0, 0),
 		ParallelTasksFinishedCallback: taskFinishedCallback,
 		TaskFinishedQueue: make(chan struct{}),
+		TimedoutCallback: timedOutCallback,
 		mtx: sync.RWMutex{},
 	}
 }
@@ -73,9 +74,7 @@ func (p *SequentialParallelTaskQueue) Execute() {
 			select {
 			case task := <- p.TaskChannel:
 				dsLogger.Trace("Going to run the task: %v", task)
-				p.mtx.Lock()
 				p.TasksInProgress = append(p.TasksInProgress, task)
-				p.mtx.Unlock()
 				go task.Run()
 			case <- p.TaskFinishedQueue:
 				dsLogger.Trace("Going to check if we need to return tasks")
@@ -117,19 +116,20 @@ func (p *SequentialParallelTaskQueue) CheckTimedoutTasks() {
 	// defer p.mtx.Unlock()
 	timedOutTasks := make([]*ParallelTask, 0, 0)
 	for _, t := range p.TasksInProgress {
-		if time.Since(t.startTime) > t.Timeout {
+		dsLogger.Debug("Checking time %v with timeout %v, isrunning: %v, isfinished: %v", time.Since(t.startTime).Nanoseconds(), t.Timeout.Nanoseconds(), t.isRunning, t.IsFinished)
+		if time.Since(t.startTime) > t.Timeout && t.IsFinished == false && t.isRunning == true {
 			timedOutTasks = append(timedOutTasks, t)
 		}
 	}
-	if p.TimedoutCallback != nil {
+	if p.TimedoutCallback != nil && len(timedOutTasks) > 0 {
 		p.TimedoutCallback(timedOutTasks)
 	}
 }
 
-func (p *SequentialParallelTaskQueue) GetRunningTasksCount() uint {
+func (p *SequentialParallelTaskQueue) GetRunningTasksCount() int {
 	// p.mtx.Lock()
 	// defer p.mtx.Unlock()
-	var count uint = 0
+	var count int = 0
 	for _, t := range p.TasksInProgress {
 		if t != nil && !t.IsFinished && t.isRunning {
 			count++
