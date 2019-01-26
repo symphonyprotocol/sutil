@@ -9,6 +9,9 @@ import "bytes"
 import "compress/zlib"
 import "encoding/base64"
 import "encoding/hex"
+import "compress/gzip"
+import "encoding/json"
+import "io/ioutil"
 // import "strconv"
 
 func BytesToString(b []byte) (s string) {
@@ -77,4 +80,50 @@ func gensecp256k1() {
 	fmt.Printf("b1: %x\n", b1)
 	fmt.Printf("a2: %x\n", a2)
 	fmt.Printf("b2: %x\n", b2)
+}
+
+func Min(x, y int64) int64 {
+    if x < y {
+        return x
+    }
+    return y
+}
+
+func Max(x, y int64) int64 {
+    if x > y {
+        return x
+    }
+    return y
+}
+
+func ObjToBytes(obj interface{}) []byte {
+	data, _ := json.Marshal(obj)
+	var b bytes.Buffer
+	gz := gzip.NewWriter(&b)
+	gz.Write([]byte(data))
+	gz.Flush()
+	gz.Close()
+	return b.Bytes()
+}
+
+func BytesToObj(data []byte, obj interface{}) error {
+	if data == nil || len(data) == 0 {
+		return fmt.Errorf("Nil/Empty data (%v) cannot be converted to Diagram", data)
+	}
+
+	rdata := bytes.NewReader(data)
+	r, err := gzip.NewReader(rdata)
+	if err != nil {
+		return err
+	}
+	s, err := ioutil.ReadAll(r)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(s, &obj)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+
+	return err
 }
